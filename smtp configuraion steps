@@ -5,6 +5,7 @@ sudo yum install postfix
 
 Install sasl packages for Postfix
 sudo yum install cyrus-sasl cyrus-sasl-lib cyrus-sasl-plain
+yum install s-nail
 
 In the /etc/postfix/main.cf file add the following lines at the end of the file
 ########################################################
