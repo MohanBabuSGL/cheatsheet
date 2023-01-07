@@ -1,0 +1,29 @@
+optimus:
+  mongo:
+    tenantProperties:
+      common:
+        uri: mongodb://${mongodb.cosmos.username}:${mongodb.cosmos.password}@${mongodb.cosmos.host}:${mongodb.cosmos.port}/common?ssl=false&authSource=admin
+        database: common
+      optimus:
+        uri: mongodb://${mongodb.cosmos.username}:${mongodb.cosmos.password}@${mongodb.cosmos.host}:${mongodb.cosmos.port}/optimus?ssl=false&authSource=admin
+        database: optimus
+      firstData:
+        uri: mongodb://${mongodb.cosmos.username}:${mongodb.cosmos.password}@${mongodb.cosmos.host}:${mongodb.cosmos.port}/firstData?ssl=false&authSource=admin
+        database: firstData
+      tmobile:
+        uri: mongodb://${mongodb.cosmos.username}:${mongodb.cosmos.password}@${mongodb.cosmos.host}:${mongodb.cosmos.port}/tmobile?ssl=false&authSource=admin
+        database: tmobile
+      optimusfin:
+        uri: mongodb://${mongodb.cosmos.username}:${mongodb.cosmos.password}@${mongodb.cosmos.host}:${mongodb.cosmos.port}/optimusfin?ssl=false&authSource=admin
+        database: optimusfin
+
+
+caseUrls:
+  create-batch: http://${CASEMGMT_SERVICE_SERVICE_HOST}:80/case/batch
+  add-case: http://${CASEMGMT_SERVICE_SERVICE_HOST}:80/case/issues
+  process-batch: http://${CASEMGMT_SERVICE_SERVICE_HOST}:80/case/batch/%s
+  get-case-template: http://${CASEMGMT_SERVICE_SERVICE_HOST}:80/case/casetemplate/internal/%s
+  
+statusUpdate:     
+  batchSize : 5
+
