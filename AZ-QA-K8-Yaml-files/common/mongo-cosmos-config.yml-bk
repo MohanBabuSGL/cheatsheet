@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodbcosmos
+  namespace: optimus-uat
+type: Opaque
+data:
+  mongodb.cosmos.username: dHJ1bmsyOWNvc21vcw==
+  mongodb.cosmos.password: TnAzQng1VW5HdkxxTGJlV3R3bW5uUEFoV3dxSVNaRUZaQkJ3bE5Sem9qNlJlTXFFdGpCbGhpRVEwVDJhSEhXT01wcHdKRml6VERkU0lkRmpjUFFBR0E9PQ==
+  DATABASE_URI: bW9uZ29kYjovL3RydW5rMjljb3Ntb3M6TnAzQng1VW5HdkxxTGJlV3R3bW5uUEFoV3dxSVNaRUZaQkJ3bE5Sem9qNlJlTXFFdGpCbGhpRVEwVDJhSEhXT01wcHdKRml6VERkU0lkRmpjUFFBR0E9PUB0cnVuazI5Y29zbW9zLm1vbmdvLmNvc21vcy5henVyZS5jb206MTAyNTUvY29tbW9uP3NzbD10cnVl
+
+
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodbcosmos
+  namespace: optimus-uat
+data:
+  mongodb.cosmos.host: "trunk29cosmos.mongo.cosmos.azure.com"
+  mongodb.cosmos.port: "10255"
+  mongodb.cosmos.username: trunk29cosmos
+  mongodb.cosmos.password: Np3Bx5UnGvLqLbeWtwmnnPAhWwqISZEFZBBwlNRzoj6ReMqEtjBlhiEQ0T2aHHWOMppwJFizTDdSIdFjcPQAGA==
+  DATABASE_URI: mongodb://trunk29cosmos:Np3Bx5UnGvLqLbeWtwmnnPAhWwqISZEFZBBwlNRzoj6ReMqEtjBlhiEQ0T2aHHWOMppwJFizTDdSIdFjcPQAGA==@trunk29cosmos.mongo.cosmos.azure.com:10255/common?ssl=true

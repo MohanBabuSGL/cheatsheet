@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodbcosmos
+  namespace: optimus-uat
+data:
+  mongodb.cosmos.host: "172.29.2.4"
+  mongodb.cosmos.port: "27017"
