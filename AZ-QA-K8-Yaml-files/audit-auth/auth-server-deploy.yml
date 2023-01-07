@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: auth-srv
+ namespace: optimus-qa
+ labels:
+  app: authsrv
+spec:
+ selector:
+  matchLabels:
+   app: authsrv
+ replicas: 1
+ template:
+  metadata:
+   labels:
+    app: authsrv
+  spec:
+   volumes:
+    - name: auth-srv-config-volume
+      configMap:
+        name: auth-srv-config
+        items:
+        - key: application.yml
+          path: application.yml
+    - name: optimus-auth-server-develop
+      hostPath:
+       path: /opt/optimus/authsrv_dev
+    - name: optimus-auth-server-develop-logs
+      hostPath:
+       path: /var/log/optimus/authsrv_dev
+   containers:
+    - name: auth-server
+      image: optimusacr.azurecr.io/auth-server:2.17.0
+      imagePullPolicy: IfNotPresent
+      env:
+       - name: mongodb.cosmos.host
+         valueFrom:
+          configMapKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.host
+       - name: mongodb.cosmos.port
+         valueFrom:
+          configMapKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.port
+       - name: azurejwks-url
+         valueFrom:
+          configMapKeyRef:
+           name: optimus
+           key: azurejwks-url
+       - name: mongodb.cosmos.username
+         valueFrom:
+          secretKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.username
+       - name: mongodb.cosmos.password
+         valueFrom:
+          secretKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.password
+       - name: jwt.secretKey
+         valueFrom:
+          secretKeyRef:
+           name: token
+           key: jwt.secretKey
+       - name: refToken.key
+         valueFrom:
+          secretKeyRef:
+           name: token
+           key: refToken.key
+      volumeMounts:
+       - name: auth-srv-config-volume
+         mountPath: /tmp/conf
+       - name: optimus-auth-server-develop
+         mountPath: /opt/optimus
+       - name: optimus-auth-server-develop-logs
+         mountPath: /var/log/optimus
+      ports:
+       - containerPort: 9090
+
+
+---
+
+
+apiVersion: v1
+kind: Service
+metadata:
+   name: auth-service
+   namespace: optimus-qa
+   labels:
+    app: authsrv
+spec:
+   selector:
+    app: authsrv
+   ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9090
+
