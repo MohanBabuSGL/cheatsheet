@@ -1,0 +1,106 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: report-srv
+ namespace: optimus-qa
+ labels:
+  app: reportsrv
+spec:
+ selector:
+  matchLabels:
+   app: reportsrv
+ replicas: 1
+ template:
+  metadata:
+   labels:
+    app: reportsrv
+  spec:
+   volumes:
+    - name: report-srv-volume
+      configMap:
+        name: report-srv-config
+        items:
+        - key: application.yml
+          path: application.yml
+    - name: optimus-report-server-develop
+      hostPath:
+       path: /opt/optimus/reportsrv_dev
+    - name: optimus-report-server-develop-logs
+      hostPath:
+       path: /var/log/optimus/reportsrv_dev
+   containers:
+    - name: report-server
+      image: optimusacr.azurecr.io/report-server:2.17.0
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "1"
+        limits:
+          memory: "6Gi"
+          cpu: "1.5"
+      env:
+       - name: mongodb.cosmos.host
+         valueFrom:
+          configMapKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.host
+       - name: mongodb.cosmos.port
+         valueFrom:
+          configMapKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.port
+       - name: azurejwks-url
+         valueFrom:
+          configMapKeyRef:
+           name: optimus
+           key: azurejwks-url
+       - name: mongodb.cosmos.username
+         valueFrom:
+          secretKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.username
+       - name: mongodb.cosmos.password
+         valueFrom:
+          secretKeyRef:
+           name: mongodbcosmos
+           key: mongodb.cosmos.password
+       - name: jwt.secretKey
+         valueFrom:
+          secretKeyRef:
+           name: token
+           key: jwt.secretKey
+       - name: refToken.key
+         valueFrom:
+          secretKeyRef:
+           name: token
+           key: refToken.key
+      volumeMounts:
+       - name: report-srv-volume
+         mountPath: /tmp/conf
+       - name: optimus-report-server-develop
+         mountPath: /opt/optimus
+       - name: optimus-report-server-develop-logs
+         mountPath: /var/log/optimus
+      ports:
+       - containerPort: 8035
+
+---
+
+
+apiVersion: v1
+kind: Service
+metadata:
+   name: report-service
+   namespace: optimus-qa
+   labels:
+    app: reportsrv
+spec:
+   selector:
+    app: reportsrv
+   ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8035
+
