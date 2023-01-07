@@ -1,0 +1,102 @@
+node()
+{
+def SYS_SSH = [usernamePassword(credentialsId: "k8s_deploy", passwordVariable: 'SYS_PASS', usernameVariable: 'SYS_USER')]
+
+
+withEnv([
+    'URL1=https://github.com/opus-consulting-solutions/audit-server.git',
+	'CREDS=Optimus_github'
+    ]){
+
+stage('GIT'){
+    sh "rm -rf *"
+    git branch: BRANCH, credentialsId: CREDS, url: URL1
+    //sh 'git checkout tags/v2.15.0-qa'
+    sh '''
+    
+    git branch -a
+    
+    sed -i '/common/d' 	settings.gradle
+    cp -f /var/lib/jenkins/documents/audit-server-develop/application.yml rest/src/main/resources/application.yml
+    cp -f /var/lib/jenkins/documents/audit-server-develop/audit-server-deployment.yml .
+    cp -f /var/lib/jenkins/documents/audit-server-develop/Dockerfile .
+    '''
+    print "Git Access working as expected"
+    
+}
+
+
+stage('Build') {
+    echo 'Building..'
+    sh '''
+    chmod 755 gradlew
+    ./gradlew -Dorg.gradle.java.home=/usr/lib/jvm/java-11-openjdk-11.0.16.1.1-1.el7_9.x86_64 -x test clean build 
+    '''
+}
+
+stage('Docker') {
+echo env.JOB_BASE_NAME
+sh '''for i in `sudo docker images | awk '/audit-server-develop/ {print $3}'`; do echo $i; sudo docker rmi -f $i; done'''
+sh "rm -rf D: ; docker build -t ${env.JOB_BASE_NAME}:${env.BUILD_TIMESTAMP} --build-arg BUILD_PROFILE=${env.BUILD_PROFILE} --no-cache ."
+sh "rm -rf ${env.JOB_BASE_NAME}*.tar;docker save -o ${env.JOB_BASE_NAME}:${env.BUILD_TIMESTAMP}.tar ${env.JOB_BASE_NAME}"
+}
+
+
+
+withCredentials(SYS_SSH){
+    def remote77 = [:]
+    remote77.name = 'Sys77'
+    remote77.host = '10.11.14.77'
+    remote77.user = env.SYS_USER
+    remote77.password = env.SYS_PASS
+    remote77.allowAnyHosts = true
+
+    def remote78 = [:]
+    remote78.name = 'Sys78'
+    remote78.host = '10.11.14.78'
+    remote78.user = env.SYS_USER
+    remote78.password = env.SYS_PASS
+    remote78.allowAnyHosts = true
+    
+    def remote79 = [:]
+    remote79.name = 'Sys79'
+    remote79.host = '10.11.14.79'
+    remote79.user = env.SYS_USER
+    remote79.password = env.SYS_PASS
+    remote79.allowAnyHosts = true
+ 
+    
+    stage('SYS-77') {
+	sshCommand remote: remote77, command: '''[[ -d /tmp/Dockerimage/ ]] || mkdir /tmp/Dockerimage/ ''', sudo: false
+	sshPut     remote: remote77, from: "${env.JOB_BASE_NAME}:${env.BUILD_TIMESTAMP}.tar", into: '/tmp/Dockerimage/'
+ 	sshCommand remote: remote77, command: "docker load -i /tmp/Dockerimage/${env.JOB_BASE_NAME}:${env.BUILD_TIMESTAMP}.tar  && rm -rf /tmp/Dockerimage/*", sudo: false
+    }
+    
+    stage('SYS-78') {
+	sshCommand remote: remote78, command: '''[[ -d /tmp/Dockerimage/ ]] || mkdir /tmp/Dockerimage/ ''', sudo: false
+	sshPut     remote: remote78, from: "${env.JOB_BASE_NAME}:${env.BUILD_TIMESTAMP}.tar", into: '/tmp/Dockerimage/'
+	sshCommand remote: remote78, command: "docker load -i /tmp/Dockerimage/${env.JOB_BASE_NAME}:${env.BUILD_TIMESTAMP}.tar  && rm -rf /tmp/Dockerimage/*", sudo: false
+    }
+    
+	
+	
+	
+
+    
+stage('kube_deploy') {
+	sshPut     remote: remote79, from: 'audit-server-deployment.yml', into: '/tmp/KubernetesFiles' 
+	sshCommand remote: remote79, command: "sudo kubectl apply -f /tmp/KubernetesFiles/audit-server-deployment.yml" , sudo: false
+	sshCommand remote: remote79, command: "sudo rm -rf /tmp/KubernetesFiles/audit-server-deployment.yml",sudo: false
+	sshCommand remote: remote79, command: "sudo kubectl set image deployment/audit-srv audit-server=${env.JOB_BASE_NAME}:${env.BUILD_TIMESTAMP} -n optimus-qa && sudo kubectl annotate deployment/audit-srv change-cause='${env.MESSAGE}' --record=true --overwrite=true -n optimus-qa &&  docker system prune -a -f" , sudo: false
+	}
+
+
+stage('cleanup DockerImage') {
+    sh "rm -rf ${env.JOB_BASE_NAME}*.tar"
+    sh '''for i in `sudo docker images | awk '/audit-server-develop/ {print $3}'`; do echo $i; sudo docker rmi -f $i; done'''
+    
+	} 
+}
+}
+ 
+}
