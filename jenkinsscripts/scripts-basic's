@@ -1,0 +1,569 @@
+AWS-UAT:
+--------
+[root@op-eus-trunk-21-004 ~]# crontab -l
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin
+
+
+
+0 5 * * * /usr/sbin/aide --check
+
+
+0 0 * * * /data/mongo_scripts/mongo_log.sh
+30 0 * * * /bin/kill -9 $(cat /data/mongo_scripts/filebeat_pid.txt) ; rm -rf  /var/lib/filebeat/filebeat.lock
+0 * * * * /data/mongo_scripts/mongo_activity.sh
+[root@op-eus-trunk-21-004 ~]#
+-----------------------------------------------------------
+[root@op-eus-trunk-21-004 ~]# cat /data/mongo_scripts/mongo_log.sh
+#!/bin/bash -e
+
+#CLUSTERID=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "cluster_id" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+#PUBLICKEY=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "public_key" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+#PRIVATEKEY=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "private_key" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+
+
+#https://docs.atlas.mongodb.com/reference/api/logs/
+
+CLUSTERID='614c2398b951d543253eb59c'
+PUBLICKEY='qbcamyur'
+PRIVATEKEY=$( aws secretsmanager get-secret-value --secret-id Optimus-UAT-Secrets --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"MongoUAT-APIkey":"//g' | sed 's/"//g')
+
+CURRENTDATE=`date +%Y%m%d`
+NOW=`date '+%F_%H:%M:%S'`
+declare -a StringArray=("optimusuat-shard-00-02.fls6t.mongodb.net" "optimusuat-shard-00-01.fls6t.mongodb.net" "optimusuat-shard-00-00.fls6t.mongodb.net")
+
+
+rm -rf /data/atlasmongologs/*
+
+for hostname in ${StringArray[@]}; do
+  echo "Obtaining logs from ${hostname}"
+  echo "curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+    --header 'Accept: application/gzip' \
+    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb.gz" \
+    --output "mongodb-${hostname}-${CURRENTDATE}.gz""
+
+  curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+    --header 'Accept: application/gzip' \
+    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb.gz" \
+    --output "/data/atlasmongologs/mongodb-${hostname}-${CURRENTDATE}.gz"
+
+  echo "Uploading logs from ${hostname}"
+  #aws s3 mv "mongodb-${hostname}-${CURRENTDATE}.gz" s3://mongodb-logs/mongodblogs/${NOW}/mongodb-${hostname}-${CURRENTDATE}.gz
+
+done
+
+echo "unzip files...."
+for file in /data/atlasmongologs/mongodb-opt*; do gunzip $file ; done
+
+echo "Move Files...."
+for file in /data/atlasmongologs/mongodb-opt*; do mv $file "$file".log; done
+
+echo "Change Ownership...."
+chmod -R 755 /data/atlasmongologs/*
+
+filebeat -e &
+echo $! > /data/mongo_scripts/filebeat_pid.txt
+
+
+#for hostname in ${StringArray[@]}; do
+#  echo "Obtaining Audit logs from ${hostname}"
+#  echo "curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+#    --header 'Accept: application/gzip' \
+#    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb-audit-log.gz" \
+#    --output "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz""
+
+#  curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+#    --header 'Accept: application/gzip' \
+#    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb-audit-log.gz" \
+#    --output "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz"
+
+#  echo "Uploading Audit logs from ${hostname}"
+#  #aws s3 mv "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz" s3://mongodb-logs/mongodblogs/${NOW}/mongodb-audit-log-${hostname}-${CURRENTDATE}.gz
+#done
+
+echo ""
+echo "End of script execution..."
+
+[root@op-eus-trunk-21-004 ~]#
+
+--------------------------------------------------------------------
+[root@op-eus-trunk-21-004 ~]# cat /data/mongo_scripts/mongo_activity.sh
+#!/bin/bash -e
+
+password=$( aws secretsmanager get-secret-value --secret-id Optimus-UAT-Secrets --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"MongoUAT-APIkey":"//g' | sed 's/"//g')
+
+today_date=$(TZ=UTC date +'%Y-%m-%d')
+today_hour=$(TZ=UTC date --date='1 hour ago' +'%H')
+
+echo "$today_date       and           $today_hour   and   $(TZ=UTC date)      and   $(TZ=UTC date --date='1 hour ago')"
+
+touch /data/mongo_scripts/activity.json
+
+> /data/mongo_scripts/activity.json
+
+curl --user "qbcamyur:$password" --digest --include   --header "Content-Type: application/json"   "https://cloud.mongodb.com/api/atlas/v1.0/groups/614c2398b951d543253eb59c/events?pageNum=1&itemsPerPage=500&minDate="$today_date"T"$today_hour":00:00Z&maxDate="$today_date"T"$today_hour":59:59Z" > /data/mongo_scripts/activity.json
+
+
+#cat activity.json | grep links | jq .results
+#cat activity.json | grep pageNum | jq .results
+
+
+result=$(cat /data/mongo_scripts/activity.json | grep pageNum | jq .results)
+
+today_date=$(TZ=UTC date +%Y.%m.%d)
+
+curl -XPUT https://localhost:9200/mongo_audit_feed_log-$today_date?pretty=true -u 'admin:OpTimus#2@22' --insecure
+
+my_array=$(cat /data/mongo_scripts/activity.json | grep pageNum | jq .results | jq -c '.[]')
+
+for item in "${my_array[@]}"; do
+for data in $item; do
+        curl --request POST --url "https://localhost:9200/mongo_audit_feed_log-"$today_date"/_doc/?pretty=" --header "Content-Type: application/x-ndjson" --data "$data" -u "admin:OpTimus#2@22" --insecure
+done
+done
+[root@op-eus-trunk-21-004 ~]#
+===============================================================================================================
+Jakarata-Prod
+---------------
+[root@op-jk-trunk-20-003 ~]# crontab -l
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin
+
+0 5 * * * /usr/sbin/aide --check
+
+30 8 * * * /bin/bash /data/s3bucket/scripts/doku/fetchDokuFileCron.sh
+30 10 * * * /bin/bash /data/s3bucket/scripts/doku/fetchDokuFileCron.sh
+30 15 * * * /bin/bash /data/s3bucket/scripts/doku/fetchDokuFileCron.sh
+30 21 * * * /bin/bash /data/s3bucket/scripts/doku/fetchDokuFileCron.sh
+
+[root@op-jk-trunk-20-003 ~]#
+--------------------------------------------------------------------------
+[root@op-jk-trunk-20-003 ~]# cat /data/s3bucket/scripts/doku/fetchDokuFileCron.sh
+
+#!/bin/bash
+cd /data/s3bucket/scripts
+
+filedate=$(date +%d' '%b' '%Y)
+#filedate=$(date --date yesterday +%d' '%b' '%Y)
+#filedate=$1
+echo "get files doku sftp " $filedate
+
+/data/s3bucket/scripts/doku/fetchDokuFile.sh "$filedate"
+
+/data/s3bucket/scripts/doku/fetchDokuFileCron-permission.sh
+
+
+
+echo "done"
+[root@op-jk-trunk-20-003 ~]#
+---------------------------------------------------------------------------
+
+[root@op-jk-trunk-20-003 ~]# cat /data/s3bucket/scripts/doku/fetchDokuFileCron.sh
+
+#!/bin/bash
+cd /data/s3bucket/scripts
+
+filedate=$(date +%d' '%b' '%Y)
+#filedate=$(date --date yesterday +%d' '%b' '%Y)
+#filedate=$1
+echo "get files doku sftp " $filedate
+
+/data/s3bucket/scripts/doku/fetchDokuFile.sh "$filedate"
+
+/data/s3bucket/scripts/doku/fetchDokuFileCron-permission.sh
+
+
+
+echo "done"
+
+[root@op-jk-trunk-20-003 ~]#
+---------------------------------------------------------------------------
+[root@op-jk-trunk-20-004 ~]# crontab -l
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin
+
+
+
+0 5 * * * /usr/sbin/aide --check
+
+
+0 0 * * * /data/mongo_scripts/mongo_log.sh
+30 0 * * * /bin/kill -9 $(cat /data/mongo_scripts/filebeat_pid.txt) ; rm -rf  /var/lib/filebeat/filebeat.lock
+0 * * * * /data/mongo_scripts/mongo_activity.sh
+
+0 5 * * * /data/mongo_scripts/pod_restart.sh
+[root@op-jk-trunk-20-004 ~]#
+--------------------------------------------------------------------------
+[root@op-jk-trunk-20-004 ~]# cat /data/mongo_scripts/mongo_log.sh
+#!/bin/bash -e
+
+#CLUSTERID=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "cluster_id" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+#PUBLICKEY=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "public_key" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+#PRIVATEKEY=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "private_key" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+
+
+#https://docs.atlas.mongodb.com/reference/api/logs/
+
+CLUSTERID='63228e43c7b0e32b2c2cb90c'
+PUBLICKEY='atjcneoh'
+PRIVATEKEY=$( aws secretsmanager get-secret-value --secret-id op-jk-trunk-20-secretsmanager --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"Trunk20-MongoAPIKey-Secret":"//g' | sed 's/"//g'  | sed 's/}//g')
+
+CURRENTDATE=`date +%Y%m%d`
+NOW=`date '+%F_%H:%M:%S'`
+declare -a StringArray=("optimustrunk20-shard-00-02.6x3lc.mongodb.net" "optimustrunk20-shard-00-01.6x3lc.mongodb.net" "optimustrunk20-shard-00-00.6x3lc.mongodb.net")
+
+
+rm -rf /data/atlasmongologs/*
+
+for hostname in ${StringArray[@]}; do
+  echo "Obtaining logs from ${hostname}"
+  echo "curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+    --header 'Accept: application/gzip' \
+    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb.gz" \
+    --output "mongodb-${hostname}-${CURRENTDATE}.gz""
+
+  curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+    --header 'Accept: application/gzip' \
+    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb.gz" \
+    --output "/data/atlasmongologs/mongodb-${hostname}-${CURRENTDATE}.gz"
+
+  echo "Uploading logs from ${hostname}"
+  #aws s3 mv "mongodb-${hostname}-${CURRENTDATE}.gz" s3://mongodb-logs/mongodblogs/${NOW}/mongodb-${hostname}-${CURRENTDATE}.gz
+
+done
+
+echo "unzip files...."
+for file in /data/atlasmongologs/mongodb-opt*; do gunzip $file ; done
+
+echo "Move Files...."
+for file in /data/atlasmongologs/mongodb-opt*; do mv $file "$file".log; done
+
+echo "Change Ownership...."
+chmod -R 755 /data/atlasmongologs/*
+
+filebeat -e &
+echo $! > /data/mongo_scripts/filebeat_pid.txt
+
+#for hostname in ${StringArray[@]}; do
+#  echo "Obtaining Audit logs from ${hostname}"
+#  echo "curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+#    --header 'Accept: application/gzip' \
+#    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb-audit-log.gz" \
+#    --output "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz""
+
+#  curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+#    --header 'Accept: application/gzip' \
+#    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb-audit-log.gz" \
+#    --output "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz"
+
+#  echo "Uploading Audit logs from ${hostname}"
+#  #aws s3 mv "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz" s3://mongodb-logs/mongodblogs/${NOW}/mongodb-audit-log-${hostname}-${CURRENTDATE}.gz
+#done
+
+echo ""
+echo "End of script execution..."
+----------------------------------------------------------------------------------------
+[root@op-jk-trunk-20-004 ~]#
+
+
+[root@op-jk-trunk-20-004 ~]# cat /data/mongo_scripts/mongo_activity.sh
+#!/bin/bash -e
+
+password=$( aws secretsmanager get-secret-value --secret-id op-jk-trunk-20-secretsmanager --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"Trunk20-MongoAPIKey-Secret":"//g' | sed 's/"//g' | sed 's/}//g')
+
+today_date=$(TZ=UTC date +'%Y-%m-%d')
+today_hour=$(TZ=UTC date --date='1 hour ago' +'%H')
+
+echo "$today_date       and           $today_hour   and   $(TZ=UTC date)      and   $(TZ=UTC date --date='1 hour ago')"
+
+touch /data/mongo_scripts/activity.json
+
+> /data/mongo_scripts/activity.json
+
+curl --user "atjcneoh:$password" --digest --include   --header "Content-Type: application/json"   "https://cloud.mongodb.com/api/atlas/v1.0/groups/63228e43c7b0e32b2c2cb90c/events?pageNum=1&itemsPerPage=500&minDate="$today_date"T"$today_hour":00:00Z&maxDate="$today_date"T"$today_hour":59:59Z" > /data/mongo_scripts/activity.json
+
+
+#cat activity.json | grep links | jq .results
+#cat activity.json | grep pageNum | jq .results
+
+
+result=$(cat /data/mongo_scripts/activity.json | grep pageNum | jq .results)
+
+today_date=$(TZ=UTC date +%Y.%m.%d)
+
+curl -XPUT https://localhost:9200/mongo_audit_feed_log-$today_date?pretty=true -u 'admin:OPTimus#2@22' --insecure
+
+my_array=$(cat /data/mongo_scripts/activity.json | grep pageNum | jq .results | jq -c '.[]')
+
+for item in "${my_array[@]}"; do
+for data in $item; do
+        curl --request POST --url "https://localhost:9200/mongo_audit_feed_log-"$today_date"/_doc/?pretty=" --header "Content-Type: application/x-ndjson" --data "$data" -u "admin:OPTimus#2@22" --insecure
+done
+done
+
+[root@op-jk-trunk-20-004 ~]#
+
+--------------------------------------------------------------------------
+[root@op-jk-trunk-20-003 scripts]# cat mongo_snap_download.sh
+#!/bin/bash
+
+CLUSTERID='63228e43c7b0e32b2c2cb90c'
+CLUSTERNAME='OptimusTrunk20'
+PUBLICKEY='atjcneoh'
+PRIVATEKEY1=$( aws secretsmanager get-secret-value --secret-id op-jk-trunk-20-secretsmanager --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"Trunk20-MongoAPIKey-Secret":"//g' | sed 's/"//g'  | sed 's/}//g')
+
+
+date=$(date +%Y%m%d_%H%m%S)
+
+#mkdir -p /root/dbbackup/${db_name}_${date}
+
+#cd /root/dbbackup/
+
+
+
+# Step 1 : List Snapshot
+create_snapshot_response=$(curl -u "${PUBLICKEY}:${PRIVATEKEY1}" --digest --include --header "Accept: application/json" --header "Content-Type: application/json" --request GET  "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${CLUSTERNAME}/backup/snapshots?pretty=true")
+
+echo $create_snapshot_response
+
+## Get the Snapshot ID
+snapshot_id=$(echo $create_snapshot_response | sed 's/"id"/\n"id"/g' | grep '"id"' | awk -F',' '{print $1}' | head -1 | awk -F'"' '{print $4}')
+echo $snapshot_id
+
+download_link_response=$(curl -u "${PUBLICKEY}:${PRIVATEKEY1}" --digest --include --header "Accept: application/json" --header "Content-Type: application/json"  --data "{\"snapshotId\" : \"$snapshot_id\", \"deliveryType\" : \"download\"  }" --request POST "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${CLUSTERNAME}/backup/restoreJobs")
+
+echo $download_link_response
+
+restore_id=$(echo $download_link_response | sed 's/"id"/\n"id"/g' | grep '"id"' | awk -F',' '{print $1}' | head -1 | awk -F'"' '{print $4}')
+echo $restore_id
+
+
+snap_download_link_response=$(curl -u "${PUBLICKEY}:${PRIVATEKEY1}" --digest --include --header "Accept: application/json" --header "Content-Type: application/json" --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${CLUSTERNAME}/backup/restoreJobs/${restore_id}?pretty=true")
+
+download_link=$(echo $snap_download_link_response | sed 's/"deliveryUrl"/\n"deliveryUrl"/g' | grep '"deliveryUrl"' | awk -F',' '{print $1}' | head -1 | awk -F'"' '{print $4}')
+
+echo $download_link
+
+
+mkdir /data/s3bucket/dbbackup/${date}
+cd /data/s3bucket/dbbackup/${date}
+
+[root@op-jk-trunk-20-003 scripts]#
+==============================================================================================================
+AWS-UAT
+-------
+[root@op-eus-trunk-21-005 ~]# crontab -l
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin
+
+
+0 5 * * * /usr/sbin/aide --check
+
+0 5 * * * /data/mongo_scripts/pod_restart.sh
+[root@op-eus-trunk-21-005 ~]#
+----------------------------------------------------------------------------------
+[root@op-eus-trunk-21-005 ~]# cat /data/mongo_scripts/pod_restart.sh
+
+#!/bin/bash
+#---------ADD the below result in CRONTAB--------------#
+# printf "SHELL=$SHELL\nPATH=$PATH\n * * * * * /bin/bash /data/backup/pod_restart.sh"
+#------------------------------------------------------#
+export KUBECONFIG=$HOME/.kube/config
+/usr/local/bin/kubectl get pods -n optimus-uat | /bin/awk '/flink-taskmanager/{print $1}'| /bin/xargs /usr/local/bin/kubectl delete pod -n optimus-uat
+wait
+#/usr/local/bin/kubectl get pods -n optimus-prod | /bin/awk '/report-srv/{print $1}'| /bin/xargs /usr/local/bin/kubectl delete pod -n optimus-prod
+#/usr/local/bin/kubectl get pods -n optimus-prod
+#wait
+#/usr/local/bin/kubectl top pods
+[root@op-eus-trunk-21-005 ~]#
+----------------------------------------------------------------------------------
+AWS-Prod
+---------
+[root@op-eus-trunk-22-003 scripts]# cat mongo_snap_download.sh
+#!/bin/bash
+
+CLUSTERID='61516225bc5b571a7bee6d04'
+CLUSTERNAME='OptimusProd'
+PUBLICKEY='gwvtpoqe'
+PRIVATEKEY1=$( aws secretsmanager get-secret-value --secret-id Optimus-PROD-Secrets --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"MongoPROD-APIkey":"//g' | sed 's/"//g'  | sed 's/}//g')
+
+
+date=$(date +%Y%m%d_%H%m%S)
+
+#mkdir -p /root/dbbackup/${db_name}_${date}
+
+#cd /root/dbbackup/
+
+
+
+# Step 1 : List Snapshot
+create_snapshot_response=$(curl -u "${PUBLICKEY}:${PRIVATEKEY1}" --digest --include --header "Accept: application/json" --header "Content-Type: application/json" --request GET  "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${CLUSTERNAME}/backup/snapshots?pretty=true")
+
+echo $create_snapshot_response
+
+## Get the Snapshot ID
+snapshot_id=$(echo $create_snapshot_response | sed 's/"id"/\n"id"/g' | grep '"id"' | awk -F',' '{print $1}' | head -1 | awk -F'"' '{print $4}')
+echo $snapshot_id
+
+download_link_response=$(curl -u "${PUBLICKEY}:${PRIVATEKEY1}" --digest --include --header "Accept: application/json" --header "Content-Type: application/json"  --data "{\"snapshotId\" : \"$snapshot_id\", \"deliveryType\" : \"download\"  }" --request POST "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${CLUSTERNAME}/backup/restoreJobs")
+
+echo $download_link_response
+
+restore_id=$(echo $download_link_response | sed 's/"id"/\n"id"/g' | grep '"id"' | awk -F',' '{print $1}' | head -1 | awk -F'"' '{print $4}')
+echo $restore_id
+
+
+snap_download_link_response=$(curl -u "${PUBLICKEY}:${PRIVATEKEY1}" --digest --include --header "Accept: application/json" --header "Content-Type: application/json" --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${CLUSTERNAME}/backup/restoreJobs/${restore_id}?pretty=true")
+
+download_link=$(echo $snap_download_link_response | sed 's/"deliveryUrl"/\n"deliveryUrl"/g' | grep '"deliveryUrl"' | awk -F',' '{print $1}' | head -1 | awk -F'"' '{print $4}')
+
+echo $download_link
+
+
+mkdir /data/s3bucket/dbbackup/${date}
+cd /data/s3bucket/dbbackup/${date}
+
+[root@op-eus-trunk-22-003 scripts]#
+
+--------------------------------------------------------------------------------------------------------------------
+[root@op-eus-trunk-22-004 ~]# crontab -l
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin
+
+0 5 * * * /usr/sbin/aide --check
+
+
+
+0 0 * * * /data/mongo_scripts/mongo_log.sh
+30 0 * * * /bin/kill -9 $(cat /data/mongo_scripts/filebeat_pid.txt) ; rm -rf  /var/lib/filebeat/filebeat.lock
+0 * * * * /data/mongo_scripts/mongo_activity.sh
+
+0 5 * * * /data/mongo_scripts/pod_restart.sh
+[root@op-eus-trunk-22-004 ~]#
+
+--------------------------------------------------------------------------------------------------------------------
+
+[root@op-eus-trunk-22-004 ~]# cat /data/mongo_scripts/mongo_log.sh
+#!/bin/bash -e
+
+#CLUSTERID=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "cluster_id" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+#PUBLICKEY=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "public_key" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+#PRIVATEKEY=$(aws ssm get-parameters --names "mongodb-atlas-key" --with-decryption --query 'Parameters[*].Value' --output text | grep "private_key" | cut -f2 -d ":" | cut -d "\"" -f2)
+
+
+
+#https://docs.atlas.mongodb.com/reference/api/logs/
+
+CLUSTERID='61516225bc5b571a7bee6d04'
+PUBLICKEY='gwvtpoqe'
+PRIVATEKEY=$( aws secretsmanager get-secret-value --secret-id Optimus-PROD-Secrets --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"MongoPROD-APIkey":"//g' | sed 's/"//g'  | sed 's/}//g')
+
+CURRENTDATE=`date +%Y%m%d`
+NOW=`date '+%F_%H:%M:%S'`
+declare -a StringArray=("optimusprod-shard-00-02.k0zko.mongodb.net" "optimusprod-shard-00-01.k0zko.mongodb.net" "optimusprod-shard-00-00.k0zko.mongodb.net")
+
+
+rm -rf /data/atlasmongologs/*
+
+for hostname in ${StringArray[@]}; do
+  echo "Obtaining logs from ${hostname}"
+  echo "curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+    --header 'Accept: application/gzip' \
+    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb.gz" \
+    --output "mongodb-${hostname}-${CURRENTDATE}.gz""
+
+  curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+    --header 'Accept: application/gzip' \
+    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb.gz" \
+    --output "/data/atlasmongologs/mongodb-${hostname}-${CURRENTDATE}.gz"
+
+  echo "Uploading logs from ${hostname}"
+  #aws s3 mv "mongodb-${hostname}-${CURRENTDATE}.gz" s3://mongodb-logs/mongodblogs/${NOW}/mongodb-${hostname}-${CURRENTDATE}.gz
+
+done
+
+echo "unzip files...."
+for file in /data/atlasmongologs/mongodb-opt*; do gunzip $file ; done
+
+echo "Move Files...."
+for file in /data/atlasmongologs/mongodb-opt*; do mv $file "$file".log; done
+
+echo "Change Ownership...."
+chmod -R 755 /data/atlasmongologs/*
+
+filebeat -e &
+echo $! > /data/mongo_scripts/filebeat_pid.txt
+
+#for hostname in ${StringArray[@]}; do
+#  echo "Obtaining Audit logs from ${hostname}"
+#  echo "curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+#    --header 'Accept: application/gzip' \
+#    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb-audit-log.gz" \
+#    --output "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz""
+
+#  curl --user ${PUBLICKEY}:${PRIVATEKEY} --digest \
+#    --header 'Accept: application/gzip' \
+#    --request GET "https://cloud.mongodb.com/api/atlas/v1.0/groups/${CLUSTERID}/clusters/${hostname}/logs/mongodb-audit-log.gz" \
+#    --output "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz"
+
+#  echo "Uploading Audit logs from ${hostname}"
+#  #aws s3 mv "mongodb-audit-log-${hostname}-${CURRENTDATE}.gz" s3://mongodb-logs/mongodblogs/${NOW}/mongodb-audit-log-${hostname}-${CURRENTDATE}.gz
+#done
+
+echo ""
+echo "End of script execution..."
+
+[root@op-eus-trunk-22-004 ~]#
+
+--------------------------------------------------------------------------------------------------------------------
+
+
+[root@op-eus-trunk-22-004 ~]# cat /data/mongo_scripts/mongo_activity.sh
+#!/bin/bash -e
+
+password=$( aws secretsmanager get-secret-value --secret-id Optimus-PROD-Secrets --query SecretString --output text  | awk -F',' '{print $1}' | sed 's/{"MongoPROD-APIkey":"//g' | sed 's/"//g' | sed 's/}//g')
+
+today_date=$(TZ=UTC date +'%Y-%m-%d')
+today_hour=$(TZ=UTC date --date='1 hour ago' +'%H')
+
+echo "$today_date       and           $today_hour   and   $(TZ=UTC date)      and   $(TZ=UTC date --date='1 hour ago')"
+
+touch /data/mongo_scripts/activity.json
+
+> /data/mongo_scripts/activity.json
+
+curl --user "gwvtpoqe:$password" --digest --include   --header "Content-Type: application/json"   "https://cloud.mongodb.com/api/atlas/v1.0/groups/61516225bc5b571a7bee6d04/events?pageNum=1&itemsPerPage=500&minDate="$today_date"T"$today_hour":00:00Z&maxDate="$today_date"T"$today_hour":59:59Z" > /data/mongo_scripts/activity.json
+
+
+#cat activity.json | grep links | jq .results
+#cat activity.json | grep pageNum | jq .results
+
+
+result=$(cat /data/mongo_scripts/activity.json | grep pageNum | jq .results)
+
+today_date=$(TZ=UTC date +%Y.%m.%d)
+
+curl -XPUT https://localhost:9200/mongo_audit_feed_log-$today_date?pretty=true -u 'admin:OPTimus#2@22' --insecure
+
+my_array=$(cat /data/mongo_scripts/activity.json | grep pageNum | jq .results | jq -c '.[]')
+
+for item in "${my_array[@]}"; do
+for data in $item; do
+        curl --request POST --url "https://localhost:9200/mongo_audit_feed_log-"$today_date"/_doc/?pretty=" --header "Content-Type: application/x-ndjson" --data "$data" -u "admin:OPTimus#2@22" --insecure
+done
+done
+
+[root@op-eus-trunk-22-004 ~]#
+
+--------------------------------------------------------------------------------------------------------------------
+
+
+
