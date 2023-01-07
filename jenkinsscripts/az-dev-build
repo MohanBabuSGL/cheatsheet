@@ -1,0 +1,73 @@
+node()
+{
+
+
+withEnv([
+
+    'URL1=https://github.com/opus-consulting-solutions/${GIT_PROJECT}',
+	'CREDS=Optimus_github',
+	'AZURE_ACR=optimusacr01.azurecr.io'
+	
+    ]){
+
+
+	stage('Logging into Azure ACR') {
+                 sh "az acr login --name OptimusACR01"
+
+      }
+      
+
+stage('GIT'){
+    sh "rm -rf *"
+    git branch: BRANCH, credentialsId: CREDS, url: URL1
+    
+    // sh 'git checkout tags/v2.16.0-qa'
+    
+    sh'''
+    
+    
+    
+    cp -f ${DOCUMENT_ROOT}/${GIT_PROJECT}/Dockerfile .
+    
+    '''
+    
+    print "Git Access working as expected"
+    
+}
+
+
+
+stage('Build') {
+    echo 'Building..'
+    sh '''
+    chmod 755 gradlew
+    ./gradlew -x test clean build
+    '''
+} 
+
+ stage('Building Docker images') {
+
+          sh '''echo "${GIT_PROJECT}:${IMAGE_TAG}"'''
+          dockerImage = docker.build "${GIT_PROJECT}:${IMAGE_TAG}"
+    }
+
+stage('Pushing to Docker Image ECR') {  
+		
+	sh "docker tag ${GIT_PROJECT}:${IMAGE_TAG} ${AZURE_ACR}/${GIT_PROJECT}:${IMAGE_TAG}"
+	
+	sh "docker push ${AZURE_ACR}/${GIT_PROJECT}:${IMAGE_TAG}"
+	}
+	
+
+
+stage('cleanup DockerImage') {
+    
+    sh '''for i in `docker images | grep "${GIT_PROJECT}" | awk '{print $3}'`; do echo $i; docker rmi -f $i; done'''
+}
+
+
+
+}
+  }	
+
+ 
