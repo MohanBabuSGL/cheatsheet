@@ -1,0 +1,81 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: optimus-ingress
+  namespace: optimus-uat
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "1200"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "1200"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "1200"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: Deny";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Content-Security-Policy: default-src 'self' 'unsafe-inline';img-src 'self' data:";
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ui-service
+            port:
+              number: 80
+      - path: /admin-server
+        pathType: Prefix
+        backend:
+          service:
+            name: admin-service
+            port:
+              number: 80
+      - path: /config/
+        pathType: Prefix
+        backend:
+          service:
+            name: config-service
+            port:
+              number: 80
+      - path: /auth
+        pathType: Prefix
+        backend:
+          service:
+            name: auth-service
+            port:
+              number: 80
+      - path: /scheduler-server
+        pathType: Prefix
+        backend:
+          service:
+            name: scheduler-service
+            port:
+              number: 80
+      - path: /taskmanager
+        pathType: Prefix
+        backend:
+          service:
+            name: taskmanager-service
+            port:
+              number: 80
+      - path: /case
+        pathType: Prefix
+        backend:
+          service:
+            name: casemgmt-service
+            port:
+              number: 80
+      - path: /report-server
+        pathType: Prefix
+        backend:
+          service:
+            name: report-service
+            port:
+              number: 80
+      - path: /audit-server
+        pathType: Prefix
+        backend:
+          service:
+            name: audit-service
+            port:
+              number: 80
