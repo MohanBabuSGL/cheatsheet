@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-jobmanager
+  namespace: optimus-qa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink
+      component: jobmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: jobmanager
+    spec:
+      containers:
+      - name: jobmanager
+        image: optimusacr.azurecr.io/flink:2.17.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6123
+          name: rpc
+        - containerPort: 6124
+          name: blob-server
+        - containerPort: 8081
+          name: webui
+        livenessProbe:
+          tcpSocket:
+            port: 6123
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        volumeMounts:
+        - name: flink-config-volume
+          mountPath: /opt/flink/conf
+        - name: optimus-flink-jobmanager
+          mountPath: /opt/optimus
+        - name: optimus-flink-jobmanager-logs
+          mountPath: /var/log/optimus
+        - name: optimus-share
+          mountPath: /opts3
+      volumes:
+      - name: flink-config-volume
+        configMap:
+          name: flink-config
+          items:
+          - key: flink-conf.yaml
+            path: flink-conf.yaml
+          - key: log4j-console.properties
+            path: log4j-console.properties
+      - name: optimus-flink-jobmanager
+        hostPath:
+         path: /opt/optimus/flinkjob
+      - name: optimus-flink-jobmanager-logs
+        hostPath:
+         path: /var/log/optimus/flink
+      - name: optimus-share
+        hostPath:
+         path: /opts3
+

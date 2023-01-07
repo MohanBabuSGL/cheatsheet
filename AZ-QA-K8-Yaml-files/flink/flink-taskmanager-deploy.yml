@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-taskmanager
+  namespace: optimus-qa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink
+      component: taskmanager
+  template:
+    metadata:
+      labels:
+        app: flink
+        component: taskmanager
+    spec:
+      containers:
+      - name: taskmanager
+        image: optimusacr.azurecr.io/flink:2.17.0
+        args: ["taskmanager"]
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: 2
+            memory: 8G
+          requests:
+            cpu: 1
+            memory: 6G
+        env:
+         - name: mongodb.cosmos.host
+           valueFrom:
+            configMapKeyRef:
+             name: mongodbcosmos
+             key: mongodb.cosmos.host
+         - name: mongodb.cosmos.port
+           valueFrom:
+            configMapKeyRef:
+             name: mongodbcosmos
+             key: mongodb.cosmos.port
+         - name: mongodb.cosmos.username
+           valueFrom:
+            secretKeyRef:
+             name: mongodbcosmos
+             key: mongodb.cosmos.username
+         - name: mongodb.cosmos.password
+           valueFrom:
+            secretKeyRef:
+             name: mongodbcosmos
+             key: mongodb.cosmos.password
+        ports:
+        - containerPort: 6122
+          name: rpc
+        - containerPort: 6125
+          name: query-state
+        livenessProbe:
+          tcpSocket:
+            port: 6122
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        volumeMounts:
+        - name: flink-config-volume
+          mountPath: /opt/flink/conf/
+        - name: optimus-flink-taskmanager
+          mountPath: /opt/optimus
+        - name: optimus-flink-taskmanager-logs
+          mountPath: /var/log/optimus
+        - name: optimus-share
+          mountPath: /opts3
+        - name: optimus-share-report
+          mountPath: /home/download
+      volumes:
+      - name: flink-config-volume
+        configMap:
+          name: flink-config
+          items:
+          - key: flink-conf.yaml
+            path: flink-conf.yaml
+          - key: log4j-console.properties
+            path: log4j-console.properties
+      - name: optimus-flink-taskmanager
+        hostPath:
+         path: /opt/optimus/flink
+      - name: optimus-flink-taskmanager-logs
+        hostPath:
+         path: /var/log/optimus/flinktask
+      - name: optimus-share
+        hostPath:
+         path: /opts3
+      - name: optimus-share-report
+        hostPath:
+         path: /opts3/optimus-share/reportwizard
+
