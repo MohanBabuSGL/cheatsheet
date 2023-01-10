@@ -7,3 +7,4 @@ find . -perm /a=x -to check executable file
 echo "3+59+100" | bc
 pkill -f jenkins
 NetworkChuck
+
