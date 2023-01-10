@@ -1,0 +1,9 @@
+touch -d 2023-02-02 filename
+ln filename filename
+find / -name "filename"
+find . -type f -name ".*" - hiddenfile
+find . -type f -empty --to check empty dir
+find . -perm /a=x -to check executable file
+echo "3+59+100" | bc
+pkill -f jenkins
+NetworkChuck
