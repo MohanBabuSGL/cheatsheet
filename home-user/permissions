@@ -1,0 +1,15 @@
+chmod 700 .           drwx------   2 root root 4096 Oct 29  2020 .                                   
+chmod 600 id_rsa      -rw-------   1 root root 1675 Oct 29  2020 id_rsa            
+chmod 640 id_rsa.pub  -rw-r--r--   1 root root  391 Oct 29  2020 id_rsa.pub
+chmod 644 known_hosts -rw-------   1 root root 2089 Nov 10  2020 known_hosts
+
+chmod 600 .bash_history     -rw-------   1 mohanba mohanba 8442 Jan 12 12:40 .bash_history
+chmod 644 .bash_logout      -rw-r--r--   1 mohanba mohanba   18 Aug 21  2019 .bash_logout
+chmod 644 .bash_profile     -rw-r--r--   1 mohanba mohanba  193 Aug 21  2019 .bash_profile
+chmod 644 .bashrc           -rw-r--r--   1 mohanba mohanba  231 Aug 21  2019 .bashrc
+chmod 600 .viminfo          -rw-------   1 mohanba mohanba 2537 Jul 21 20:54 .viminfo
+chmod 700 .ssh
+
+dr-xr-x---. 35 root root 4096 Jan 12 18:30 ..
+-rw-------   1 mohanba mohanba  150 Jan 12 18:30 .Xauthority
+-rw-r--r--   1 mohanba mohanba  172 Feb 17  2020 .kshrc
