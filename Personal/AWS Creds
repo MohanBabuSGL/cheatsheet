@@ -1,0 +1,62 @@
+rmohanbabu12987456231@gmail.com
+Zxcv@1234*! Expired
+Opus - Microsoft Password : 
+18601207777
+
+----------------------
+r9851518@gmail.com/Zxcv@1234*! - Suspended 
+postfixawsacnt@gmail.com:tat@punch@123
+rcbforevermx0017@gmail.com:polytech2013
+AWS: Zxcv@1234*!
+monbsgl@gmail.com
+Photos - FSL Reliving Pics 
+AZ-Login Details
+postfixawsacnt@gmail.com
+tat@punch
+`
+rmohanbabu12987456231@gmail.com/Zxcv@1234*!
+mohanbabu.r9686@outlook.com/Omicron@2022
+70492814606
+7094012345
+08041467777
+
+[smtp.gmail.com]:587 rmohanbabu12987456231@gmail.com:Zxcv@1234*!
+
+relayhost = [smtp.gmail.com]:587
+smtp_use_tls = yes
+smtp_sasl_auth_enable = yes
+smtp_sasl_security_options =
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_tls_CAfile = /etc/ssl/certs/ca-bundle.crt
+
+myorigin = /etc/mailname
+mydestination = mydomain.com, localhost.fr, localhost
+smtp_tls_security_level = encrypt  
+
+relayhost = [smtp.gmail.com]:587
+
+smtp_sasl_auth_enable = yes
+smtp_sasl_security_options = noanonymous
+smtp_sasl_password_maps = hash:/etc/postfix/sasl/sasl_passwd
+smtp_tls_security_level = encrypt
+smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+
+echo "Test Postfix Gmail SMTP Relay via https://restorebin.com/?p=5809" | mail -s "Postfix Gmail SMTP Relay 1" ovijay.01995@gmail.com
+
+mail -s "Test subject" rmohanbabu12987456231@gmail.com
+echo "Hello" | mail -s "test" rmohanbabu12987456231@gmail.com.
+inet_protocols =
+
+echo "Hello" | mail -s "Test subject" ovijay.01995@gmail.com
+
+ip-172-31-30-190.ec2.internal
+
+#myhostname = oel7.lab 
+myhostname = ip-172-31-30-190.ec2.interna
+relayhost = [smtp.gmail.com]:587
+smtp_use_tls = yes
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_tls_CAfile = /etc/ssl/certs/ca-bundle.crt
+smtp_sasl_security_options = noanonymous
+smtp_sasl_tls_security_options = noanonymous
