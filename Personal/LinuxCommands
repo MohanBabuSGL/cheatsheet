@@ -1,0 +1,10 @@
+seq 1000 | xargs -I {} touch {}.txt
+grep -Irl mohan *
+grep -Irl "chmod 777" *.txt | xargs sed -i 's/chmod 777/chmod 750/g' - Find and replace
+ls | cut -d. -f1 | xargs -I {} mv {}.txt {}.text 
+seq 5 | xargs -n 1 -P 1 bash -c 'echo(0); sleep 1'
+--------------
+
+
+
+sed -i 's/old-text/new-text/g' input.txt
