@@ -1,0 +1,79 @@
+--------------------------------------------Use Below Steps to create EKS cluster--------------------------------------
+Select EKS in AWS console - create cluster
+Create IAM Role
+Create Cluster (AmazonEKSClusterPolicy)
+
+Aws cli:
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" 
+yum install unzip -y
+unzip awscliv2.zip
+sudo ./aws/install
+/usr/local/bin/aws --version
+aws --version
+aws configure
+
+aws configure:
+Access Key -Create
+
+aws configure list-profiles
+aws sts get-caller-identity
+
+Kubectl install:
+curl -o kubectl https://s3.us-west-2.amazonaws.com/amazon-eks/1.23.7/2022-06-29/bin/linux/amd64/kubectl
+openssl sha1 -sha256 kubectl
+chmod +x ./kubectl
+mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+kubectl version --short --client
+
+Cluster Setup
+
+aws eks --region ap-south-1 describe-cluster --name My_TestCluster --query cluster.status
+aws eks --region ap-south-1 update-kubeconfig --name My_TestCluster
+aws eks list-clusters
+
+worker node IAM roles
+IAM Roles:
+* AmazonEKS_CNI_Policy
+* AmazonEKSworkernodepolicy
+* AmazonEC2ContainerRegistryReadOnly
+
+
+Access Key ID:
+AKIAZBSKJ2FUA76GGMEL
+Secret Access Key:
+afs/Ehwd0rz5h56EviBlM8XOGp44jNna+w8Os3SU
+
+
+
+
+
+Prometheus
+https://www.fosslinux.com/10398/how-to-install-and-configure-prometheus-on-centos-7.htm
+
+
+aws eks --region ap-south-1 describe-cluster --name My-Cluster --query cluster.status
+aws eks --region ap-south-1 update-kubeconfig --name My-Cluster
+ kubectl get pods -n test --no-headers=true | awk '/nginx-deployment2/{print $1}'| xargs kubectl delete -n test pod
+ 
+ apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
