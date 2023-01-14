@@ -1,0 +1,73 @@
+#!/bin/bash
+
+CURRENT=$(df / | grep / | awk '{ print $5}' | sed 's/%//g')
+
+THRESHOLD=90
+
+if [ "$CURRENT" -gt "$THRESHOLD" ] ; then
+
+mail -s 'Disk Space Alert' vijayt3795@gmail.com << EOF
+
+Your root partition remaining free space is critically low. Used: $CURRENT%
+
+EOF
+
+fi 9739803902
+------------------------------------------------------------------------------------------
+vijayt3795@gmail.com/omicron@2022
+telnet mail.vijayt3795@gmail.com 25
+
+echo "Test message from Linux server using ssmtp" | sudo ssmtp -vvv vijayt3795@gmail.com
+
+/var/ssmtp/ssmtp.conf
+/var/ssmtp/ssmtp.conf
+ vim /etc/ssmtp/ssmtp.conf
+echo "Testing...1...2...3" | ssmtp vijayt3795@gmail.com:Omicron@2022 dG2bB7uG3
+--------------------------------------------------------------------------------------
+r9851518@gmail.com
+Zxcv@1234*!
+rcbforevermx0017@gmail.com:polytech2013
+AWS: Polytech2@13 
+UAN- 100717391103/Mohan/*420
+
+Vijay@1234
+[smtp.gmail.com]:587 postfixawsacnt@gmail.com:tat@punch
+r.mohanbabu048@gmail.com/9686980932
+[smtp.gmail.com]:587 monitoringgm7@gmail.com:Welcomeopus
+[smtp.gmail.com]:587 vijayt3795@gmail.com:hgzfveqjzmxifyfi rcbforevermx0017@gmail.com:OPus@123
+[smtp.gmail.com]:587 rcbforevermx0017@gmail.com:areacodeone
+[smtp.gmail.com]:587 r9851518@gmail.com:userpassword#12
+[smtp.gmail.com]:587 rmohanbabu12987456231@gmail.com:rcbforever
+[smtp.gmail.com]:587 mohanbaburrcbeesalacupnamde@gmail.com:9686mohan
+[smtp.gmail.com]:587 monbsgl@gmail.com:i124qyou
+[smtp.gmail.com]:587 mohanbabu.r9686@outlook.com:Omicron@2022
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "ovijay.01995@gmail.com" rmohanbabu12987456231@gmail.com
+echo "Just testing my sendmail gmail relay" | mail -r "rmohanbabu12987456231@gmail.com" rcbforevermx0017@gmail.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "usermohanr@outlook.com" mohanbabu.r9686@outlook.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "rcbforevermx0017@gmail.com" rmohanbabu12987456231@gmail.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "mohanbabu.r9686@outlook.com" mohanbabu.r9686@outlook.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "rmohanbabu12987456231@gmail.com" rcbforevermx0017@gmail.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "mohanbaburrcbeesalacupnamde@gmail.com" rcbforevermx0017@gmail.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "r9851518@gmail.com" rcbforevermx0017@gmail.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "mohanbaburrcbeesalacupnamde@gmail.com" rmohanbabu12987456231@gmail.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "monbsgl@gmail.com" rmohanbabu12987456231@gmail.com
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "rcbforevermx0017@gmail.com" rmohanbabu12987456231@gmail.com
+telnet smtp-emeasouth.outlook.com 587
+saslpasswd2 username
+
+telnet smtp-unisa.outlook.com 587
+smtp-namwest.outlook.com
+smtp-unisa.outlook.com
+
+service rsyslog restart
+hgzfveqjzmxifyfi`	
+
+mb048r@gmail.com
+9019550321
+
+oracle
+r.mohanbabu048@gmail.com
+Zxcv@1234
+echo "Test mail from postfix" | mail -s "Test Postfix" -r "postfixawsacnt@gmail.com" monbsgl@gmail.com
+
+smtp-server=smtp.gmail.com/user=postfixawsacnt@gmail.com/ssl/novalidate-cert
