@@ -1,5 +1,5 @@
 touch -d 2023-02-02 filename
-ln filename filename
+ln filename filename, ln -s file file.txt, ln -sfn file file.txt(to change directory).
 find / -name "filename"
 find . -type f -name ".*" - hiddenfile
 find . -type f -empty --to check empty dir
