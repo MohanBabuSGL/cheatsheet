@@ -9,6 +9,8 @@ aws configure
 install docker
 need images Dockerfile
 
+create ECR repo in AWS private repo
+
 aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 083277675134.dkr.ecr.ap-south-1.amazonaws.com
 docker build -t practice-test-ecr .
 docker tag practice-test-ecr:latest 083277675134.dkr.ecr.ap-south-1.amazonaws.com/practice-test-ecr:latest
