@@ -5,6 +5,7 @@ mkdir /s3fstest
 touch /etc/passwd-s3fs
 chmod 600 /etc/passwd-s3fs
 vi /etc/passwd-s3fs
+add accesskey:secretkey
 vi /etc/fuse.conf
 add below entry
 user_allow_other
