@@ -1,0 +1,15 @@
+IAM-user
+Policy:
+AmazonEC2ContainerRegistryFullAccess
+AmazonElasticContainerRegistryPublicFullAccess
+
+install awscli
+aws configure
+
+install docker
+need images Dockerfile
+
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 083277675134.dkr.ecr.ap-south-1.amazonaws.com
+docker build -t practice-test-ecr .
+docker tag practice-test-ecr:latest 083277675134.dkr.ecr.ap-south-1.amazonaws.com/practice-test-ecr:latest
+docker push 083277675134.dkr.ecr.ap-south-1.amazonaws.com/practice-test-ecr:latest
