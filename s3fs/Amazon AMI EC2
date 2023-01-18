@@ -1,0 +1,21 @@
+yum update all
+yum install automake fuse fuse-devel gcc-c++ git libcurl-devel libxml2-devel make openssl-devel
+git clone https://github.com/s3fs-fuse/s3fs-fuse.git
+cd s3fs-fuse
+./autogen.sh
+./configure --prefix=/usr --with-openssl
+make
+make install
+which s3fs
+touch /etc/passwd-s3fs
+vim /etc/passwd-s3fs
+chmod 640 /etc/passwd-s3fs
+mkdir /mys3bucket
+s3fs s3buckmumbai -o use_cache=/tmp -o allow_other -o uid=1001 -o mp_umask=002 -o multireq_max=5 /mys3bucket
+which s3fs
+vi /etc/rc.local
+# Add below entry
+/usr/bin/s3fs s3buckmumbai -o use_cache=/tmp -o allow_other -o uid=1001 -o mp_umask=002 -o multireq_max=5 /mys3bucket
+df -Th /mys3bucket
+cd /mys3bucket
+touch myfilestodays{1..10}.txt
