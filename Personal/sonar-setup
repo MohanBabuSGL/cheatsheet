@@ -1,0 +1,18 @@
+sonarqube installation & Setup:
+
+# docker pull sonarqube:7.8-community
+
+# docker run -d --name sonarqube \
+    -p 9000:9000 \
+    -v sonarqube_extensions:/opt/sonarqube/extensions \
+    d6b00ff7d205
+	
+# curl http://localhost:9000
+	
+# Need to Open port 9000 in AZ/AWS Portal
+
+# update token and URL in jenkins script
+
+# instal socarqube scanner pluggin under manage jenkins.
+
+# update server URL & Name in configure system (manage jenkins) under SonarQube installations.
