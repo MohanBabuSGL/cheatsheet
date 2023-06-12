@@ -1,0 +1,46 @@
+ *  kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+ *  kubectl get ns
+ *  kubectl get deploy,svc
+ *  kubectl edit  deploy kubernetes-dashboard -n kubernetes-dashboard
+ 
+     spec:
+      containers:
+      - args:
+        - --insecure-port=9090
+        - --namespace=kubernetes-dashboard
+        image: kubernetesui/dashboard:v2.7.0
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 9090
+            scheme: HTTP
+            
+ *  kubectl get pods -n kubernetes-dashboard
+ *  kubectl get svc -n kubernetes-dashboard
+ *  kubectl edit svc kubernetes-dashboard -n kubernetes-dashboard
+ 
+   - nodePort: 30084
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
+  selector:
+    k8s-app: kubernetes-dashboard
+  sessionAffinity: None
+  type: NodePort
+status:
+  loadBalancer: {}
+ 
+ *  kubectl get svc -n kubernetes-dashboard
+ *  kubectl get sa -n kubernetes-dashboard
+ *  kubectl get rolebinding -n kubernetes-dashboard
+ *  kubectl get clusterrolebindings
+ *  kubectl get clusterrole
+ *  kubectl create rolebinding qarolebinding --serviceaccount kubernetes-dashboard:kubernetes-dashboard --clusterrole view -n kubernetes-dashboard
+ *  kubectl create clusterrolebinding qarolebinding --serviceaccount kubernetes-dashboard:kubernetes-dashboard --clusterrole view -n kubernetes-dashboard 
+ *  kubectl create rolebinding qarolebinding --serviceaccount test:test --clusterrole view -n test
+
+kubectl create rolebinding qarolebinding --serviceaccount=kubernetes-dashboard:kubernetes-dashboard --clusterrole=view -n qa
+
+kubectl create rolebinding qa7rolebinding --serviceaccount=kubernetes-dashboard:kubernetes-dashboard --clusterrole=edit -n qa
