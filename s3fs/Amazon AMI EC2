@@ -1,5 +1,5 @@
 s3fullaccess -IAM user 
-
+Need to create Access and Secret key (Security credentials)
 
 yum update all
 yum install automake fuse fuse-devel gcc-c++ git libcurl-devel libxml2-devel make openssl-devel
